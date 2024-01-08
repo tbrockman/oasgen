@@ -1,14 +1,14 @@
+#![feature(let_chains)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-
 #![allow(unused)]
-mod server;
 mod format;
+mod server;
 
-pub use openapiv3::*;
 pub use format::*;
-pub use oasgen_macro::{OaSchema, oasgen};
-pub use oasgen_core::{OaSchema};
 pub use oasgen_core as core;
+pub use oasgen_core::OaSchema;
+pub use oasgen_macro::{oasgen, OaSchema};
+pub use openapiv3::*;
 pub use server::Server;
 
 #[cfg(feature = "swagger-ui")]
@@ -17,7 +17,7 @@ pub use swagger_ui;
 
 pub mod __private {
     pub use inventory;
-    pub use oasgen_core::{SchemaRegister, OperationRegister};
+    pub use oasgen_core::{OperationRegister, SchemaRegister};
 
     pub fn fn_path_to_op_id(type_name: &str) -> Option<String> {
         Some(type_name.split("::").skip(1).collect::<Vec<_>>().join("_"))
@@ -51,7 +51,9 @@ pub fn generate_openapi() -> OpenAPI {
     let mut openapi = OpenAPI::default();
     for flag in inventory::iter::<oasgen_core::SchemaRegister> {
         let schema = (flag.constructor)();
-        openapi.schemas.insert(flag.name.to_string(), ReferenceOr::Item(schema));
+        openapi
+            .schemas
+            .insert(flag.name.to_string(), ReferenceOr::Item(schema));
     }
     // This is required to have stable diffing between builds
     openapi.schemas.sort_keys();
