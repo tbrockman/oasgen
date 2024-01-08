@@ -8,7 +8,7 @@ use http::Method;
 use once_cell::sync::Lazy;
 use openapiv3::{OpenAPI, Operation, ReferenceOr};
 
-use oasgen_core::{OaSchema};
+use oasgen_core::OaSchema;
 
 #[cfg_attr(docsrs, doc(cfg(feature = "actix")))]
 #[cfg(feature = "actix")]
@@ -18,7 +18,9 @@ mod actix;
 mod axum;
 mod none;
 
-static OPERATION_LOOKUP: Lazy<HashMap<&'static str, &'static (dyn Fn() -> Operation + Send + Sync)>> = Lazy::new(|| {
+static OPERATION_LOOKUP: Lazy<
+    HashMap<&'static str, &'static (dyn Fn() -> Operation + Send + Sync)>,
+> = Lazy::new(|| {
     let mut map = HashMap::new();
     for flag in inventory::iter::<oasgen_core::OperationRegister> {
         let z: &'static (dyn Fn() -> Operation + Send + Sync) = flag.constructor;
@@ -71,7 +73,9 @@ impl<Router: Default> Server<Router, OpenAPI> {
         let mut openapi = OpenAPI::default();
         for flag in inventory::iter::<oasgen_core::SchemaRegister> {
             let schema = (flag.constructor)();
-            openapi.schemas.insert(flag.name.to_string(), ReferenceOr::Item(schema));
+            openapi
+                .schemas
+                .insert(flag.name.to_string(), ReferenceOr::Item(schema));
         }
         // This is required to have stable diffing between builds
         openapi.schemas.sort_keys();
@@ -89,9 +93,7 @@ impl<Router: Default> Server<Router, OpenAPI> {
     }
 
     /// Add a handler to the OpenAPI spec (which is different than mounting it to a server).
-    fn add_handler_to_spec<F>(&mut self, path: &str, method: Method, _handler: &F)
-        where
-    {
+    fn add_handler_to_spec<F>(&mut self, path: &str, method: Method, _handler: &F) {
         let mut path = path.to_string();
         if path.contains(':') {
             use once_cell::sync::OnceCell;
@@ -100,12 +102,20 @@ impl<Router: Default> Server<Router, OpenAPI> {
             let remap = REMAP.get_or_init(|| Regex::new("/:([a-zA-Z0-9_]+)/").unwrap());
             path = remap.replace_all(&path, "/{$1}/").to_string();
         }
-        let item = self.openapi.paths.paths.entry(path.to_string()).or_default();
-        let item = item.as_mut().expect("Currently don't support references for PathItem");
+        let item = self
+            .openapi
+            .paths
+            .paths
+            .entry(path.to_string())
+            .or_default();
+        let item = item
+            .as_mut()
+            .expect("Currently don't support references for PathItem");
         let type_name = std::any::type_name::<F>();
-        let operation = OPERATION_LOOKUP.get(type_name)
-
-            .expect(&format!("Operation {} not found in OpenAPI spec.", type_name))();
+        let operation = OPERATION_LOOKUP.get(type_name).expect(&format!(
+            "Operation {} not found in OpenAPI spec.",
+            type_name
+        ))();
         match method.as_str() {
             "GET" => item.get = Some(operation),
             "POST" => item.post = Some(operation),
@@ -193,7 +203,8 @@ impl<Router: Default> Server<Router, OpenAPI> {
         let path = path.as_ref();
         if var("OASGEN_WRITE_SPEC").map(|s| s == "1").unwrap_or(false) {
             let spec = if path.extension().map(|e| e == "json").unwrap_or(false) {
-                serde_json::to_string(&self.openapi).expect("Serializing OpenAPI spec to JSON failed.")
+                serde_json::to_string(&self.openapi)
+                    .expect("Serializing OpenAPI spec to JSON failed.")
             } else {
                 serde_yaml::to_string(&self.openapi).expect("Serializing OpenAPI spec failed.")
             };

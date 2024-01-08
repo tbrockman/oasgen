@@ -30,7 +30,12 @@ path = "tests/test-enum.rs"
 [[test]]
 name = "oasgen_test_actix"
 path = "tests/test-actix.rs"
-required-features = ["actix"]
+required-features = ["actix", "swagger-ui"]
+
+[[test]]
+name = "oasgen_text_actix_server"
+path = "src/server/actix.rs"
+required-features = ["actix", "swagger-ui"]
 
 [[test]]
 name = "oasgen_test_axum"
@@ -45,8 +50,8 @@ futures = "0.3.28"
 http = "0.2.9"
 indexmap = "2"
 openapiv3-extended = { version = "4.0.4" }
-oasgen-core = { path = "../core", version = "0.18.4"}
-oasgen-macro = { path = "../macro", version = "0.18.4"}
+oasgen-core = { path = "../core", version = "0.18.4" }
+oasgen-macro = { path = "../macro", version = "0.18.4" }
 serde = { version = "1.0.171", features = ["derive"] }
 serde_json = "1.0.100"
 serde_yaml = "0.9.22"

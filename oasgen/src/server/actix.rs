@@ -1,3 +1,5 @@
+#[cfg(feature = "swagger-ui")]
+use actix_web::HttpRequest;
 use actix_web::{
     delete, web, Error, FromRequest, Handler, HttpResponse, Resource, Responder, Scope,
 };
@@ -5,6 +7,8 @@ use futures::future::{ok, Ready};
 use http::Method;
 use openapiv3::OpenAPI;
 use std::sync::{Arc, RwLock};
+#[cfg(feature = "swagger-ui")]
+use swagger_ui::SwaggerUi;
 
 use oasgen_core::OaSchema;
 
@@ -110,6 +114,7 @@ impl Server<ActixRouter, Arc<OpenAPI>> {
                 web::resource(&path).route(web::get().to(OaSpecYamlHandler(self.openapi.clone()))),
             );
         }
+        #[cfg(feature = "swagger-ui")]
         if let Some(path) = self.swagger_ui_route
             && let Some(swagger_ui) = self.swagger_ui
         {
@@ -148,6 +153,7 @@ impl actix_web::dev::Handler<()> for OaSpecYamlHandler {
     }
 }
 
+#[cfg(feature = "swagger-ui")]
 async fn handler_swagger(req: HttpRequest, data: web::Data<SwaggerUi>) -> impl Responder {
     let url = req.path();
     if let Some(mut response) = data.handle_url(url) {
@@ -159,5 +165,28 @@ async fn handler_swagger(req: HttpRequest, data: web::Data<SwaggerUi>) -> impl R
         builder.body(response.body_mut().to_owned())
     } else {
         HttpResponse::NotFound().finish()
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "swagger-ui")]
+#[cfg(feature = "actix")]
+mod tests {
+    use crate::Server;
+    use actix_web::{test, App};
+
+    #[actix_web::test]
+    async fn test_swagger_get() {
+        let server = Server::actix()
+            .route_yaml_spec("/openapi.yaml")
+            .route_json_spec("/openapi.json")
+            .swagger_ui("/swagger/")
+            .freeze();
+        let app = test::init_service(App::new().service(server.into_service())).await;
+        let req = test::TestRequest::get()
+            .uri("/swagger/index.html")
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
     }
 }
